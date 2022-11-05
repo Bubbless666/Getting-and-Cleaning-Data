@@ -1,0 +1,97 @@
+---
+title: "CodeBook"
+author: "Sara"
+date: "11/5/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Setting working directory
+```{r, eval=FALSE}
+setwd("~/Desktop/R/datasciencecoursera")
+```
+
+Including libraries
+```{r, eval=FALSE}
+library(data.table)
+library(dplyr)
+```
+
+Assigning all data frames
+```{r, eval=FALSE}
+#The features selected for this database come from the accelerometer and gyroscope 3-axial raw signals tAcc-XYZ and tGyro-XYZ.
+featureNames <- read.table("UCI HAR Dataset/features.txt")
+
+#List of activities performed when the corresponding measurements were taken and its codes 
+activityLabels <- read.table("UCI HAR Dataset/activity_labels.txt", header = FALSE)
+
+#contains train data of 21/30 volunteer subjects being observed
+subjectTrain <- read.table("UCI HAR Dataset/train/subject_train.txt", header = FALSE)
+
+#contains train data of activities’code labels
+activityTrain <- read.table("UCI HAR Dataset/train/y_train.txt", header = FALSE)
+
+#contains recorded features train data
+featuresTrain <- read.table("UCI HAR Dataset/train/X_train.txt", header = FALSE)
+
+#contains test data of 9/30 volunteer test subjects being observed
+subjectTest <- read.table("UCI HAR Dataset/test/subject_test.txt", header = FALSE)
+
+#contains test data of activities’code labels
+activityTest <- read.table("UCI HAR Dataset/test/y_test.txt", header = FALSE)
+
+#contains recorded features test data
+featuresTest <- read.table("UCI HAR Dataset/test/X_test.txt", header = FALSE)
+```
+
+*Step 1: Merges the training and the test sets to create one data set.*
+```{r, eval=FALSE}
+subject <- rbind(subjectTrain, subjectTest)
+activity <- rbind(activityTrain, activityTest)
+features <- rbind(featuresTrain, featuresTest)
+
+colnames(features) <- t(featureNames[2])
+colnames(activity) <- "Activity"
+colnames(subject) <- "Subject"
+
+mergeddata <- cbind(features,activity,subject)
+```
+*Step 2: Extracts only the measurements on the mean and standard deviation for each measurement.*
+```{r, eval=FALSE}
+tidydata <- mergeddata %>% 
+        select(grep(".*Mean.*|.*Std.*", names(mergeddata), ignore.case=TRUE), Activity, Subject)
+```
+*Step 3: Uses descriptive activity names to name the activities in the data set.*
+```{r, eval=FALSE}
+tidydata$Activity <- as.character(tidydata$Activity)
+for (i in 1:6){
+        tidydata$Activity[tidydata$Activity == i] <- as.character(activityLabels[i,2])
+}
+```
+
+*Step 4: Appropriately labels the data set with descriptive variable names.*
+```{r, eval=FALSE}
+names(tidydata)<-gsub("Acc", "Accelerometer", names(tidydata))
+names(tidydata)<-gsub("Gyro", "Gyroscope", names(tidydata))
+names(tidydata)<-gsub("BodyBody", "Body", names(tidydata))
+names(tidydata)<-gsub("Mag", "Magnitude", names(tidydata))
+names(tidydata)<-gsub("^t", "Time", names(tidydata))
+names(tidydata)<-gsub("^f", "Frequency", names(tidydata))
+names(tidydata)<-gsub("tBody", "TimeBody", names(tidydata))
+names(tidydata)<-gsub("-mean()", "Mean", names(tidydata), ignore.case = TRUE)
+names(tidydata)<-gsub("-std()", "STD", names(tidydata), ignore.case = TRUE)
+names(tidydata)<-gsub("-freq()", "Frequency", names(tidydata), ignore.case = TRUE)
+names(tidydata)<-gsub("angle", "Angle", names(tidydata))
+names(tidydata)<-gsub("gravity", "Gravity", names(tidydata))
+```
+
+*Step 5: From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject.*
+```{r, eval=FALSE}
+seconddata <- tidydata %>%
+        group_by(Subject, Activity) %>%
+        summarise_all(funs(mean))
+```
+
